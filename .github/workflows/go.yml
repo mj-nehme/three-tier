@@ -53,11 +53,14 @@ jobs:
         working-directory: ./login/gocode
         run: go test -v -coverprofile=coverage.out ./...
 
+      - name: Fix coverage paths
+        working-directory: ./login/gocode
+        run: sed -i 's|^login/|login/gocode/|g' coverage.out
+
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4
         with:
           files: ./login/gocode/coverage.out
-          directory: ./login/gocode
           fail_ci_if_error: true
           verbose: true
         env:
