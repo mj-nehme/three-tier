@@ -18,6 +18,7 @@ login/gocode/main
 
 # Output of the go coverage tool
 *.out
+coverage.html
 
 # Go workspace file
 go.work
