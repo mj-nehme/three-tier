@@ -21,7 +21,7 @@ import (
 
 var localhost = "127.0.0.1"
 
-var http_port = 80
+var http_port = 8000
 var mongodb_port = 27017
 var database_name = "login_app"
 var collection_name = "users"
@@ -148,7 +148,11 @@ func main() {
 	}
 	fmt.Println("Mongodb IP: ", mongodb_ip)
 	usersCollection = connectDB(mongodb_ip)
-	createUsers()
+	if usersCollection != nil {
+		createUsers()
+	} else {
+		fmt.Println("Warning: Running without database connection. Login will use hardcoded credentials.")
+	}
 	router.HandleFunc("/", indexPageHandler)
 	router.HandleFunc("/internal", internalPageHandler)
 
@@ -156,28 +160,36 @@ func main() {
 	router.HandleFunc("/logout", logoutHandler).Methods("POST")
 
 	http.Handle("/", router)
-	http.ListenAndServe(":"+strconv.Itoa(http_port), nil)
+	fmt.Printf("Server starting on port %d...\n", http_port)
+	err := http.ListenAndServe(":"+strconv.Itoa(http_port), nil)
+	if err != nil {
+		fmt.Printf("Failed to start server: %v\n", err)
+	}
 }
 
 func connectDB(mongodb_ip string) *mongo.Collection {
-
 	fmt.Println(mongodb_ip)
 	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI("mongodb://"+mongodb_ip+":"+strconv.Itoa(mongodb_port)+"/"))
 	if err != nil {
-		panic(err)
+		fmt.Printf("Failed to connect to MongoDB: %v\n", err)
+		return nil
 	}
 	if err := client.Ping(context.TODO(), readpref.Primary()); err != nil {
-		panic(err)
+		fmt.Printf("Failed to ping MongoDB: %v\n", err)
+		return nil
 	}
 
 	db := client.Database(database_name)
-
 	db.CreateCollection(context.TODO(), collection_name)
-
+	fmt.Println("Successfully connected to MongoDB")
 	return db.Collection(collection_name)
 }
 
 func createUsers() {
+	if usersCollection == nil {
+		fmt.Println("Skipping user creation - no database connection")
+		return
+	}
 	// insert a single document into a collection
 	// create a bson.D object
 	user := bson.D{{Key: "username", Value: username}, {Key: "password", Value: password}}
@@ -185,11 +197,19 @@ func createUsers() {
 	_, err := usersCollection.InsertOne(context.TODO(), user)
 	// check for errors in the insertion
 	if err != nil {
-		panic(err)
+		fmt.Printf("Failed to create user: %v\n", err)
+	} else {
+		fmt.Println("Default user created successfully")
 	}
 }
 
 func verifyCredentials(user string, pass string) bool {
+	// If no database connection, use hardcoded credentials for demonstration
+	if usersCollection == nil {
+		fmt.Println("Using hardcoded credentials (no database)")
+		return user == username && pass == password
+	}
+
 	// retrieve single and multiple documents with a specified filter using FindOne() and Find()
 	// create a search filer
 	//filter := bson.D{{Key: "username:", Value: user}, {Key: "password", Value: pass}}

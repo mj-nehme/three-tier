@@ -102,13 +102,13 @@ case $choice in
         
         # Start the login service
         print_status "Starting login service..."
-        docker run -d --name login-service -p 8000:80 --link mongo-db:mongo login-app mongo-db
+        docker run -d --name login-service -p 80:8000 --link mongo-db:mongo login-app mongo-db
         
         # Wait a bit for the service to start
         sleep 3
         
         print_success "Application deployed!"
-        print_success "Visit http://localhost:8000 to access the application"
+        print_success "Visit http://localhost:80 to access the application"
         print_status "Default credentials: Username=Ahmad, Password=Pass123"
         ;;
     3)
@@ -137,7 +137,7 @@ case $choice in
         make k8s-status
         
         print_success "Kubernetes deployment completed!"
-        print_status "Use 'kubectl port-forward service/login-app-service 8000:80 -n three-tier-app' to access the application"
+        print_status "Use 'kubectl port-forward service/login-app-service 80:8000 -n three-tier-app' to access the application"
         ;;
     4)
         print_status "Cleaning up..."

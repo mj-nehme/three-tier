@@ -56,7 +56,8 @@ jobs:
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4
         with:
-          file: ./login/gocode/coverage.out
+          files: ./login/gocode/coverage.out
+          directory: ./login/gocode
           fail_ci_if_error: true
           verbose: true
         env:

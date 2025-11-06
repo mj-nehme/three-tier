@@ -17,7 +17,7 @@ COPY gocode/*.go ./
 # Build the application
 RUN go build -o main main.go
 
-EXPOSE 80
+EXPOSE 8000
 ARG MONGODB_IP
 ENV MONGODB_IP=$MONGODB_IP
 

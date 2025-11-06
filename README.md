@@ -25,7 +25,7 @@ A three-tier application separates your code into three layers:
            │
 ┌─────────────────────┐
 │    Application      │  ← Backend Logic (Go App)
-│      Layer          │    Port 80 (exposed as 8000)
+│      Layer          │    Port 80 (exposed from 8000)
 └─────────────────────┘
            │
 ┌─────────────────────┐
@@ -86,13 +86,13 @@ make docker-build
 docker run -d --name mongo-db -p 27017:27017 mongo-app
 
 # Run the Go application container
-docker run -d --name login-service -p 8000:80 \
+docker run -d --name login-service -p 80:8000 \
   --link mongo-db:mongo login-app mongo-db
 
-# Visit http://localhost:8000 in your browser
+# Visit http://localhost:80 in your browser
 ```
 
-**Why Port 8000?** The Go app runs on port 80 inside the container, but Docker maps it to port 8000 on your computer to avoid conflicts.
+**Why Port 80?** The Go app runs on port 8000 inside the container, but Docker maps it to port 80 on your computer to avoid conflicts.
 
 ### Step 3B: Running with Kubernetes (Advanced Way)
 
@@ -117,8 +117,8 @@ make k8s-clean
 The main application is in `login/gocode/main.go`:
 
 ```go
-// The app listens on port 80 (internal)
-var http_port = 80
+// The app listens on port 8000 (internal)
+var http_port = 8000
 var mongodb_port = 27017
 
 // Default credentials for testing
@@ -248,8 +248,8 @@ kubectl logs deployment/mongodb -n three-tier-app
 
 **"Port already in use"**
 ```bash
-# Kill any processes using port 8000
-lsof -ti:8000 | xargs kill
+# Kill any processes using port 80
+lsof -ti:80 | xargs kill
 ```
 
 **"Docker image not found"**
