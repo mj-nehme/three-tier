@@ -49,6 +49,19 @@ jobs:
         working-directory: ./login/gocode
         run: go test -v ./...
 
+      - name: Test with coverage
+        working-directory: ./login/gocode
+        run: go test -v -coverprofile=coverage.out ./...
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./login/gocode/coverage.out
+          fail_ci_if_error: true
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
   docker:
     runs-on: ubuntu-latest
     needs: build

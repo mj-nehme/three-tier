@@ -1,152 +1,319 @@
-# Three-Tier Application
+# Three-Tier Application Tutorial 📚
 
 ![Go](https://github.com/mj-nehme/three-tier/workflows/Go/badge.svg)
+[![codecov](https://codecov.io/gh/mj-nehme/three-tier/branch/master/graph/badge.svg)](https://codecov.io/gh/mj-nehme/three-tier)
 
-A three-tier application that consists of:
+## 🎓 Learning Objectives
 
-- **Client**: Frontend layer for user interaction
-- **Login**: A webapp that has a login webpage running on port _8000_. This app is supposed to run in a separate container.
-- **MongoDB**: A MongoDB database running on port _27017_. This app is supposed to run in a different docker container.
+This project teaches you how to build and deploy a **three-tier application** using modern technologies. Perfect for students learning about:
 
-## Architecture
+- **Backend Development** with Go (Golang)
+- **Database Integration** with MongoDB
+- **Containerization** with Docker
+- **Orchestration** with Kubernetes
+- **CI/CD** with GitHub Actions
+
+## 🏗️ What is a Three-Tier Application?
+
+A three-tier application separates your code into three layers:
 
 ```
-Client (Web Interface) 
-    ↓
-Login Service (Go - Port 8000)
-    ↓  
-MongoDB (Database - Port 27017)
+┌─────────────────────┐
+│   Presentation      │  ← Frontend (Web Browser)
+│      Layer          │
+└─────────────────────┘
+           │
+┌─────────────────────┐
+│    Application      │  ← Backend Logic (Go App)
+│      Layer          │    Port 80 (exposed as 8000)
+└─────────────────────┘
+           │
+┌─────────────────────┐
+│      Data           │  ← Database (MongoDB)
+│      Layer          │    Port 27017
+└─────────────────────┘
 ```
 
-## Quick Start
+### Our Application Components:
 
-### Prerequisites
+- **Frontend Layer**: Simple HTML login form
+- **Backend Layer**: Go web server handling authentication
+- **Database Layer**: MongoDB storing user credentials
 
-- Go 1.20 or higher
-- Docker
-- Docker Compose (optional)
+## 🚀 Quick Start Guide
 
-### Building the Application
+### Step 1: Check Prerequisites
 
-#### Using Make (Recommended)
+Make sure you have these installed:
 
 ```bash
+# Check Go installation
+go version  # Should show Go 1.20+
+
+# Check Docker installation  
+docker --version
+
+# Check Kubernetes (kubectl)
+kubectl version --client
+
+# For local Kubernetes, you can use:
+# - Docker Desktop (includes Kubernetes)
+# - minikube
+# - kind
+```
+
+### Step 2: Clone and Build
+
+```bash
+# Clone the repository
+git clone https://github.com/mj-nehme/three-tier.git
+cd three-tier
+
 # See all available commands
 make help
 
-# Run all development checks (format, lint, build, test)
+# Build and test everything
 make dev
-
-# Run CI checks (what GitHub Actions runs)
-make ci-test
-
-# Build the application
-make build
-
-# Run tests
-make test
 ```
 
-#### Manual Build
+### Step 3A: Running with Docker (Simple Way)
 
 ```bash
-# Navigate to the Go application directory
-cd login/gocode
+# Build Docker images
+make docker-build
 
-# Download dependencies
-go mod download
-
-# Build the application
-go build -v main.go
-
-# Run tests
-go test -v ./...
-```
-
-### Running with Docker Compose (Recommended)
-
-```bash
-# Start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop all services
-docker-compose down
-```
-
-### Running with Docker (Manual)
-
-```bash
-# Build the MongoDB container
-docker build -t mongo-app ./mongo
-
-# Build the Login application container  
-docker build -t login-app ./login
-
-# Run MongoDB
+# Run MongoDB container
 docker run -d --name mongo-db -p 27017:27017 mongo-app
 
-# Run Login application (replace localhost with container IP if needed)
-docker run -d --name login-service -p 8000:80 --link mongo-db:mongo login-app
+# Run the Go application container
+docker run -d --name login-service -p 8000:80 \
+  --link mongo-db:mongo login-app mongo-db
+
+# Visit http://localhost:8000 in your browser
 ```
 
-### Running Locally
+**Why Port 8000?** The Go app runs on port 80 inside the container, but Docker maps it to port 8000 on your computer to avoid conflicts.
+
+### Step 3B: Running with Kubernetes (Advanced Way)
 
 ```bash
-# Start MongoDB (requires MongoDB installed locally)
-mongod --port 27017
+# Deploy to Kubernetes
+make k8s-deploy
 
-# Run the Go application
-cd login/gocode
-go run main.go
+# Check if everything is running
+make k8s-status
+
+# Get the external IP (for LoadBalancer)
+kubectl get service login-app-loadbalancer -n three-tier-app
+
+# Clean up when done
+make k8s-clean
 ```
 
-The application will be available at `http://localhost:8000`
+## 🔧 Understanding the Code
 
-## Default Credentials
+### Backend (Go Application)
 
-- Username: `Ahmad`
-- Password: `Pass123`
+The main application is in `login/gocode/main.go`:
 
-## Development
+```go
+// The app listens on port 80 (internal)
+var http_port = 80
+var mongodb_port = 27017
 
-### Running Tests
+// Default credentials for testing
+var username = "Ahmad"
+var password = "Pass123"
+```
+
+**Key Features:**
+- Session management with secure cookies
+- MongoDB integration
+- Simple HTML forms
+- HTTP routing with Gorilla Mux
+
+### Database (MongoDB)
+
+- **Database**: `login_app` 
+- **Collection**: `users`
+- **Default User**: Ahmad / Pass123
+
+## 📁 Project Structure
+
+```
+three-tier/
+├── README.md              # You are here!
+├── Makefile              # Build automation
+├── .github/workflows/    # CI/CD automation
+│   └── go.yml           # GitHub Actions
+├── login/               # Backend application
+│   ├── Dockerfile       # Container definition
+│   └── gocode/         # Go source code
+│       ├── main.go     # Main application
+│       ├── main_test.go # Tests
+│       ├── go.mod      # Dependencies
+│       └── go.sum      # Dependency checksums
+├── mongo/              # Database
+│   └── Dockerfile     # MongoDB container
+└── k8s/               # Kubernetes deployments
+    ├── mongodb-deployment.yaml
+    ├── login-app-deployment.yaml
+    └── kustomization.yaml
+```
+
+## 🧪 Testing Your Knowledge
+
+### 1. Basic Testing
 
 ```bash
-cd login/gocode
-go test -v ./...
+# Run unit tests
+make test
+
+# Run tests with coverage
+make test-coverage
+# This creates coverage.html - open it in your browser!
 ```
+
+### 2. Manual Testing
+
+1. **Start the application** (Docker or Kubernetes)
+2. **Open your browser** to http://localhost:8000
+3. **Try logging in** with:
+   - Username: `Ahmad`
+   - Password: `Pass123`
+4. **Try wrong credentials** to see error handling
+
+### 3. Understanding Docker
+
+```bash
+# Build images manually
+docker build -t login-app ./login
+docker build -t mongo-app ./mongo
+
+# See what's inside
+docker images
+docker run -it login-app sh  # Explore the container
+```
+
+### 4. Understanding Kubernetes
+
+```bash
+# Apply deployments step by step
+kubectl apply -f k8s/mongodb-deployment.yaml
+kubectl apply -f k8s/login-app-deployment.yaml
+
+# Watch pods start up
+kubectl get pods -n three-tier-app -w
+
+# See logs
+kubectl logs -n three-tier-app deployment/login-app
+kubectl logs -n three-tier-app deployment/mongodb
+```
+
+## 🔬 Advanced Experiments
+
+### Experiment 1: Scaling the Application
+
+```bash
+# Scale the login app to 5 replicas
+kubectl scale deployment login-app --replicas=5 -n three-tier-app
+
+# Watch the pods
+kubectl get pods -n three-tier-app -w
+```
+
+### Experiment 2: Modify the Code
+
+1. Change the default username/password in `login/gocode/main.go`
+2. Rebuild: `make docker-build`
+3. Redeploy: `make k8s-deploy`
+4. Test your changes!
+
+### Experiment 3: Add More Tests
+
+1. Look at `login/gocode/main_test.go`
+2. Add a new test function
+3. Run `make test` to see it work
+
+## 🐛 Troubleshooting
+
+### Common Issues:
+
+**"Cannot connect to MongoDB"**
+```bash
+# Check if MongoDB pod is running
+kubectl get pods -n three-tier-app
+kubectl logs deployment/mongodb -n three-tier-app
+```
+
+**"Port already in use"**
+```bash
+# Kill any processes using port 8000
+lsof -ti:8000 | xargs kill
+```
+
+**"Docker image not found"**
+```bash
+# Make sure you built the images
+make docker-build
+```
+
+**"Kubectl command not found"**
+- Install kubectl or enable Kubernetes in Docker Desktop
+
+## 📊 Monitoring and CI/CD
 
 ### Code Quality
 
-```bash
-# Run linter
-go vet ./...
+This project uses:
+- **GitHub Actions** for automated testing
+- **CodeCov** for test coverage tracking
+- **Go vet** for code quality
+- **Go fmt** for code formatting
 
-# Format code
-go fmt ./...
-```
+### Viewing Coverage
 
-## CI/CD
+1. Run `make test-coverage`
+2. Open `login/gocode/coverage.html` in your browser
+3. See which parts of your code are tested!
 
-This project uses GitHub Actions for continuous integration. The pipeline:
+## 🎯 Next Steps
 
-1. Builds the Go application
-2. Runs tests
-3. Performs code quality checks
-4. Builds Docker containers
-5. Tests container functionality
+Once you understand this project, try:
 
-## Contributing
+1. **Add a frontend framework** (React, Vue, etc.)
+2. **Add user registration** functionality
+3. **Use environment variables** for configuration
+4. **Add logging** and monitoring
+5. **Deploy to a cloud provider** (AWS, GCP, Azure)
+6. **Add HTTPS/TLS** security
+7. **Implement real authentication** (JWT tokens, OAuth)
+
+## 🤝 Contributing
+
+Found a bug? Want to add a feature? Great!
 
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch: `git checkout -b my-new-feature`
 3. Make your changes
-4. Run tests and ensure they pass
-5. Submit a pull request
+4. Run tests: `make ci-test`
+5. Commit: `git commit -am 'Add some feature'`
+6. Push: `git push origin my-new-feature`
+7. Submit a pull request
 
-## License
+## 📚 Additional Resources
 
-This project is open source and available under the [MIT License](LICENSE).
+- [Go Tutorial](https://tour.golang.org/)
+- [Docker Documentation](https://docs.docker.com/)
+- [Kubernetes Basics](https://kubernetes.io/docs/tutorials/kubernetes-basics/)
+- [MongoDB Tutorial](https://docs.mongodb.com/manual/tutorial/)
+
+## ❓ Getting Help
+
+- 📧 Create an issue in this repository
+- 💬 Ask questions in the GitHub discussions
+- 🔍 Check the troubleshooting section above
+
+---
+
+**Happy Learning! 🎉**
