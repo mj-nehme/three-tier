@@ -5,29 +5,62 @@ name: Go
 
 on:
   push:
-    branches: [ "master" ]
+    branches: ["master"]
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.20'
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.20"
 
-    - name: Build
-      run: go build -v ./login/gocode/main.go
+      - name: Go mod download
+        working-directory: ./login/gocode
+        run: go mod download
 
-    - name: Test
-      run: go test -v ./login/gocode/...
+      - name: Go mod verify
+        working-directory: ./login/gocode
+        run: go mod verify
 
-    - name: Upload coverage reports to Codecov
-      uses: codecov/codecov-action@v3
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Build
+        working-directory: ./login/gocode
+        run: go build -v main.go
+
+      - name: Run go vet
+        working-directory: ./login/gocode
+        run: go vet ./...
+
+      - name: Check formatting
+        working-directory: ./login/gocode
+        run: |
+          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+            echo "Code is not formatted properly. Please run 'go fmt ./...'"
+            gofmt -s -l .
+            exit 1
+          fi
+
+      - name: Test
+        working-directory: ./login/gocode
+        run: go test -v ./...
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Login Docker image
+        run: docker build -t login-app ./login
+
+      - name: Build MongoDB Docker image
+        run: docker build -t mongo-app ./mongo
+
+      - name: Verify Docker images
+        run: |
+          docker images | grep -E "(login-app|mongo-app)"

@@ -1,4 +1,45 @@
+# Nomad files
 nomad/
-login/gocode/gocode
+
+# Kubernetes files
 k8s/
-.gitignore
+
+# Go build artifacts
+login/gocode/gocode
+login/gocode/main
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# Dependency directories
+vendor/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker artifacts
+*.log
