@@ -134,9 +134,9 @@ func internalPageHandler(response http.ResponseWriter, request *http.Request) {
 
 var router = mux.NewRouter()
 
-func main() {
-
-	var mongodb_ip = ""
+// getMongoDBIP parses command line arguments and returns the MongoDB IP
+func getMongoDBIP() string {
+	var mongodb_ip string
 	if len(os.Args) > 1 {
 		if os.Args[1] == "" {
 			mongodb_ip = localhost
@@ -146,6 +146,11 @@ func main() {
 	} else {
 		mongodb_ip = localhost
 	}
+	return mongodb_ip
+}
+
+// initializeApp sets up the database connection and creates users
+func initializeApp(mongodb_ip string) {
 	fmt.Println("Mongodb IP: ", mongodb_ip)
 	usersCollection = connectDB(mongodb_ip)
 	if usersCollection != nil {
@@ -153,15 +158,35 @@ func main() {
 	} else {
 		fmt.Println("Warning: Running without database connection. Login will use hardcoded credentials.")
 	}
+}
+
+// setupRouter configures all the HTTP routes
+func setupRouter() *mux.Router {
 	router.HandleFunc("/", indexPageHandler)
 	router.HandleFunc("/internal", internalPageHandler)
-
 	router.HandleFunc("/login", loginHandler).Methods("POST")
 	router.HandleFunc("/logout", logoutHandler).Methods("POST")
+	return router
+}
 
+// startServer starts the HTTP server on the specified port
+func startServer(port int) error {
 	http.Handle("/", router)
-	fmt.Printf("Server starting on port %d...\n", http_port)
-	err := http.ListenAndServe(":"+strconv.Itoa(http_port), nil)
+	fmt.Printf("Server starting on port %d...\n", port)
+	return http.ListenAndServe(":"+strconv.Itoa(port), nil)
+}
+
+// runApp is the main application logic, separated for testing
+func runApp() {
+	mongodb_ip := getMongoDBIP()
+	initializeApp(mongodb_ip)
+	setupRouter()
+}
+
+func main() {
+	runApp()
+
+	err := startServer(http_port)
 	if err != nil {
 		fmt.Printf("Failed to start server: %v\n", err)
 	}
