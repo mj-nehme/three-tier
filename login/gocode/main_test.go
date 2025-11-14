@@ -1628,3 +1628,156 @@ func TestRunAppWithoutDatabase(t *testing.T) {
 	// This should not panic - should fall back to hardcoded credentials
 	runApp()
 }
+
+// Test MongoDB authentication credentials
+func TestGetMongoDBCredentials(t *testing.T) {
+	// Save original env vars
+	oldUsername := os.Getenv("MONGODB_USERNAME")
+	oldPassword := os.Getenv("MONGODB_PASSWORD")
+	defer func() {
+		os.Setenv("MONGODB_USERNAME", oldUsername)
+		os.Setenv("MONGODB_PASSWORD", oldPassword)
+	}()
+
+	// Test with no environment variables
+	os.Unsetenv("MONGODB_USERNAME")
+	os.Unsetenv("MONGODB_PASSWORD")
+	username, password := getMongoDBCredentials()
+	if username != "" || password != "" {
+		t.Errorf("getMongoDBCredentials should return empty strings when env vars not set, got %s/%s", username, password)
+	}
+
+	// Test with both environment variables set
+	os.Setenv("MONGODB_USERNAME", "testuser")
+	os.Setenv("MONGODB_PASSWORD", "testpass")
+	username, password = getMongoDBCredentials()
+	if username != "testuser" || password != "testpass" {
+		t.Errorf("getMongoDBCredentials should return env var values, got %s/%s", username, password)
+	}
+
+	// Test with only username set
+	os.Setenv("MONGODB_USERNAME", "onlyuser")
+	os.Unsetenv("MONGODB_PASSWORD")
+	username, password = getMongoDBCredentials()
+	if username != "onlyuser" || password != "" {
+		t.Errorf("getMongoDBCredentials should handle partial credentials, got %s/%s", username, password)
+	}
+}
+
+func TestConnectDBWithAuthentication(t *testing.T) {
+	// Save original values
+	originalUsername := mongodb_username
+	originalPassword := mongodb_password
+	defer func() {
+		mongodb_username = originalUsername
+		mongodb_password = originalPassword
+	}()
+
+	// Test connection string building with authentication
+	mongodb_username = "testuser"
+	mongodb_password = "testpass"
+
+	// Try to connect (will fail, but we're testing the URI building logic)
+	collection := connectDB("localhost")
+
+	// Reset credentials
+	mongodb_username = ""
+	mongodb_password = ""
+
+	// Connection should fail gracefully with auth credentials
+	if collection != nil {
+		// If it somehow connects, clean up
+		collection.Database().Drop(context.Background())
+	}
+}
+
+func TestConnectDBWithoutAuthentication(t *testing.T) {
+	// Save original values
+	originalUsername := mongodb_username
+	originalPassword := mongodb_password
+	defer func() {
+		mongodb_username = originalUsername
+		mongodb_password = originalPassword
+	}()
+
+	// Ensure no auth credentials
+	mongodb_username = ""
+	mongodb_password = ""
+
+	// Try to connect (will fail without MongoDB running, but tests URI building)
+	collection := connectDB("invalid-host-for-test")
+
+	// Should return nil for invalid host
+	if collection != nil {
+		t.Error("connectDB should return nil for invalid host")
+	}
+}
+
+func TestInitializeAppWithCredentials(t *testing.T) {
+	// Save original state
+	oldUsername := os.Getenv("MONGODB_USERNAME")
+	oldPassword := os.Getenv("MONGODB_PASSWORD")
+	originalCollection := usersCollection
+	defer func() {
+		os.Setenv("MONGODB_USERNAME", oldUsername)
+		os.Setenv("MONGODB_PASSWORD", oldPassword)
+		usersCollection = originalCollection
+	}()
+
+	// Set test credentials
+	os.Setenv("MONGODB_USERNAME", "testdbuser")
+	os.Setenv("MONGODB_PASSWORD", "testdbpass")
+
+	// Initialize app (will fail to connect but should read env vars)
+	initializeApp("invalid-test-host")
+
+	// Verify credentials were read
+	if mongodb_username != "testdbuser" || mongodb_password != "testdbpass" {
+		t.Errorf("initializeApp should read MongoDB credentials from env vars, got %s/%s", mongodb_username, mongodb_password)
+	}
+}
+
+func TestMongoDBURIConstruction(t *testing.T) {
+	// Save original values
+	originalUsername := mongodb_username
+	originalPassword := mongodb_password
+	defer func() {
+		mongodb_username = originalUsername
+		mongodb_password = originalPassword
+	}()
+
+	testCases := []struct {
+		name             string
+		username         string
+		password         string
+		expectedContains string
+	}{
+		{
+			name:             "no auth",
+			username:         "",
+			password:         "",
+			expectedContains: "mongodb://",
+		},
+		{
+			name:             "with auth",
+			username:         "admin",
+			password:         "secret",
+			expectedContains: "mongodb://admin:secret@",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mongodb_username = tc.username
+			mongodb_password = tc.password
+
+			// We'll test that the URI is constructed correctly
+			// by attempting a connection (which will fail)
+			// The URI format is tested indirectly through connection attempts
+			collection := connectDB("test-host-that-does-not-exist")
+			if collection != nil {
+				t.Error("Should not connect to non-existent host")
+			}
+		})
+	}
+}

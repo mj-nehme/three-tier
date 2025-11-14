@@ -82,10 +82,10 @@ make dev
 # Build Docker images
 make docker-build
 
-# Run MongoDB container
+# Run MongoDB container (without authentication)
 docker run -d --name mongo-db -p 27017:27017 mongo-app
 
-# Run the Go application container
+# Run the Go application container (without authentication)
 docker run -d --name login-service -p 80:8000 \
   --link mongo-db:mongo login-app mongo-db
 
@@ -93,6 +93,26 @@ docker run -d --name login-service -p 80:8000 \
 ```
 
 **Why Port 80?** The Go app runs on port 8000 inside the container, but Docker maps it to port 80 on your computer to avoid conflicts.
+
+#### Running with MongoDB Authentication (Recommended for Production)
+
+```bash
+# Run MongoDB container with authentication
+docker run -d --name mongo-db \
+  -e MONGO_INITDB_ROOT_USERNAME=admin \
+  -e MONGO_INITDB_ROOT_PASSWORD=secretpassword \
+  -p 27017:27017 mongo-app
+
+# Run the Go application container with MongoDB credentials
+docker run -d --name login-service \
+  -e MONGODB_USERNAME=admin \
+  -e MONGODB_PASSWORD=secretpassword \
+  -p 80:8000 \
+  --link mongo-db:mongo login-app mongo-db
+```
+
+**📖 See [MONGODB_AUTH.md](MONGODB_AUTH.md) for detailed MongoDB authentication setup and Kubernetes examples.**
+
 
 ### Step 3B: Running with Kubernetes (Advanced Way)
 
