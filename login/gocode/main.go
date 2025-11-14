@@ -27,6 +27,8 @@ var database_name = "login_app"
 var collection_name = "users"
 var username = "Ahmad"
 var password = "Pass123"
+var mongodb_username = ""
+var mongodb_password = ""
 var usersCollection *mongo.Collection
 
 // cookie handling
@@ -149,9 +151,17 @@ func getMongoDBIP() string {
 	return mongodb_ip
 }
 
+// getMongoDBCredentials reads MongoDB username and password from environment variables
+func getMongoDBCredentials() (string, string) {
+	username := os.Getenv("MONGODB_USERNAME")
+	password := os.Getenv("MONGODB_PASSWORD")
+	return username, password
+}
+
 // initializeApp sets up the database connection and creates users
 func initializeApp(mongodb_ip string) {
 	fmt.Println("Mongodb IP: ", mongodb_ip)
+	mongodb_username, mongodb_password = getMongoDBCredentials()
 	usersCollection = connectDB(mongodb_ip)
 	if usersCollection != nil {
 		createUsers()
@@ -194,7 +204,16 @@ func main() {
 
 func connectDB(mongodb_ip string) *mongo.Collection {
 	fmt.Println(mongodb_ip)
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI("mongodb://"+mongodb_ip+":"+strconv.Itoa(mongodb_port)+"/"))
+
+	// Build connection string with authentication if credentials are provided
+	var uri string
+	if mongodb_username != "" && mongodb_password != "" {
+		uri = fmt.Sprintf("mongodb://%s:%s@%s:%d/", mongodb_username, mongodb_password, mongodb_ip, mongodb_port)
+	} else {
+		uri = fmt.Sprintf("mongodb://%s:%d/", mongodb_ip, mongodb_port)
+	}
+
+	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(uri))
 	if err != nil {
 		fmt.Printf("Failed to connect to MongoDB: %v\n", err)
 		return nil
